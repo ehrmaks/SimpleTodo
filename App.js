@@ -1,8 +1,9 @@
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Platform } from "react-native";
 import styled from "styled-components/native";
 import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Container = styled.SafeAreaView`
   flex: 1;
@@ -44,21 +45,60 @@ const Input = styled.TextInput`
 
 const Button = styled.Button``;
 
+const Check = styled.TouchableOpacity`
+  margin-right: 4px;
+`;
+
+const CheckIcon = styled.Text`
+  font-size: 20px;
+`;
+
 export default function App() {
-  const [list, setList] = useState([{ id: 1, todo: "할 일 1" }]);
+  const [list, setList] = useState([]);
   const [todo, setTodo] = useState("");
+
+  useEffect(() => {
+    getData();
+  }, []);
+
+  async function getData() {
+    try {
+      const data = await AsyncStorage.getItem("list");
+      if (data) {
+        setList(JSON.parse(data));
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  }
 
   function handlePressSubmit() {
     if (validationCheck()) {
       if (list.length > 0) {
         const { id } = list[list.length - 1];
-        setList([...list, { id: id + 1, todo }]);
+        const value = [...list, { id: id + 1, todo, done: false }];
+        setListAndStore(value);
         setTodo("");
       } else {
-        setList([{ id: 1, todo }]);
+        const value = [{ id: 1, todo, done: false }];
+        setListAndStore(value);
         setTodo("");
       }
     }
+  }
+
+  async function setListAndStore(value) {
+    setList(value);
+    await AsyncStorage.setItem("list", JSON.stringify(value));
+  }
+
+  function handlePressDeleteTodo(id) {
+    const value = list.filter((l2) => id !== l2.id);
+    setListAndStore(value);
+  }
+
+  function handleChangeTodo(value) {
+    setTodo(value);
   }
 
   function validationCheck() {
@@ -78,10 +118,13 @@ export default function App() {
           {list.length > 0 ? (
             list.map((l) => (
               <TodoItem key={l.id}>
+                <Check>
+                  <CheckIcon>{l.done ? "☑️" : "✅"}</CheckIcon>
+                </Check>
                 <TodoItemText>{l.todo}</TodoItemText>
                 <TodoItemButton
                   title="삭제"
-                  onPress={() => setList(list.filter((l2) => l.id !== l2.id))}
+                  onPress={() => handlePressDeleteTodo(l.id)}
                 />
               </TodoItem>
             ))
@@ -92,7 +135,14 @@ export default function App() {
           )}
         </Contents>
         <InputContainer>
-          <Input value={todo} onChangeText={(value) => setTodo(value)} />
+          <Input
+            value={todo}
+            onChangeText={(value) => handleChangeTodo(value)}
+            returnKeyType="done"
+            multiline={true}
+            blurOnSubmit={true}
+            onSubmitEditing={() => handlePressSubmit()}
+          />
           <Button title="전송" onPress={() => handlePressSubmit()} />
         </InputContainer>
       </KeyboardAvoidingView>
