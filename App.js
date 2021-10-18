@@ -4,6 +4,7 @@ import { StyleSheet, Platform } from "react-native";
 import styled from "styled-components/native";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import produce from "immer";
 
 const Container = styled.SafeAreaView`
   flex: 1;
@@ -109,6 +110,15 @@ export default function App() {
     return true;
   }
 
+  function handlePressCheck(item) {
+    setListAndStore(
+      produce(list, (draft) => {
+        const index = list.indexOf(item);
+        draft[index].done = !list[index].done;
+      })
+    );
+  }
+
   return (
     <Container>
       <KeyboardAvoidingView
@@ -118,7 +128,7 @@ export default function App() {
           {list.length > 0 ? (
             list.map((l) => (
               <TodoItem key={l.id}>
-                <Check>
+                <Check onPress={() => handlePressCheck(l)}>
                   <CheckIcon>{l.done ? "☑️" : "✅"}</CheckIcon>
                 </Check>
                 <TodoItemText>{l.todo}</TodoItemText>
